@@ -2,12 +2,6 @@ spring:
   application:
     name: auth-service
 
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
       ddl-auto: validate
@@ -18,4 +12,24 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
 
 server:
-  port: 8081
+  port: 8082
+
+user-service:
+  base-url: ${USER_SERVICE_URL:http://localhost:8081}
+
+auth:
+  jwt:
+    access-token-expiration: 900000
+    refresh-token-expiration: 604800000
+    private-key-path: ${JWT_PRIVATE_KEY_PATH}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH}
+
+app:
+  bootstrap-admin:
+    username: ${ADMIN_USERNAME:}
+    password: ${ADMIN_PASSWORD:}
+    user-id: ${ADMIN_USER_ID:}
+
+logging:
+  level:
+    org.springframework.security: INFO
