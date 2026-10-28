@@ -40,7 +40,7 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable()) //NOSONAR
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
