@@ -43,7 +43,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public RegisterResponse createCredential(CreateCredentialRequest request) {
+    public RegisterResponse register(CreateCredentialRequest request) {
         if (credentialRepository.existsByUsername(request.username())) {
             throw new UsernameAlreadyExistsException(request.username());
         }

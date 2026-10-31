@@ -30,7 +30,7 @@ public class AuthController {
     public ResponseEntity<RegisterResponse> createCredential(
             @Valid @RequestBody CreateCredentialRequest request
     ) {
-        RegisterResponse response = authService.createCredential(request);
+        RegisterResponse response = authService.register(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
