@@ -41,3 +41,11 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# JWT RSA keys
+secrets/
+*.pem
+
+# IntelliJ IDEA
+.idea/
+out/

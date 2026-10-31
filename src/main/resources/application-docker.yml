@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/authdb}
+    username: ${DB_USERNAME:authuser}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+user-service:
+  base-url: ${USER_SERVICE_URL:http://user-service:8081}
+
+auth:
+  jwt:
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:/run/secrets/jwt_private_key}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:/run/secrets/jwt_public_key}
+
+logging:
+  level:
+    org.springframework.security: INFO
