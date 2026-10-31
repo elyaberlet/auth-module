@@ -7,7 +7,7 @@ import com.marketplace.authservice.dto.response.ValidateTokenResponse;
 
 public interface AuthService {
 
-    RegisterResponse createCredential(CreateCredentialRequest request);
+    RegisterResponse register(CreateCredentialRequest request);
 
     TokenResponse login(LoginRequest request);
 
