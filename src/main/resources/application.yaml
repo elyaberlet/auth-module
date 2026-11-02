@@ -21,8 +21,8 @@ auth:
   jwt:
     access-token-expiration: 900000
     refresh-token-expiration: 604800000
-    private-key-path: ${JWT_PRIVATE_KEY_PATH}
-    public-key-path: ${JWT_PUBLIC_KEY_PATH}
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:./secrets/private_key.pem}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:./secrets/public_key.pem}
 
 app:
   bootstrap-admin:

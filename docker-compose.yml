@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: authdb
       POSTGRES_USER: authuser
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-authpassword}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5434:5432"
     volumes:
@@ -28,10 +28,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       DB_URL: jdbc:postgresql://postgres:5432/authdb
       DB_USERNAME: authuser
-      DB_PASSWORD: ${DB_PASSWORD:-authpassword}
+      DB_PASSWORD: ${DB_PASSWORD}
       JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public_key
-      USER_SERVICE_URL: http://user-service:8081
+      USER_SERVICE_URL: http://host.docker.internal:8081
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_USER_ID: ${ADMIN_USER_ID:-}
