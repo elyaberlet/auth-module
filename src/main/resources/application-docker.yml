@@ -6,7 +6,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
 user-service:
-  base-url: ${USER_SERVICE_URL:http://user-service:8081}
+  base-url: ${USER_SERVICE_URL:http://host.docker.internal:8081}
 
 auth:
   jwt:
