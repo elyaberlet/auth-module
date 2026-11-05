@@ -1,3 +1,4 @@
+
 package com.innowise.authservice.config;
 
 import com.innowise.authservice.entity.Role;
@@ -32,6 +33,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && (
+                "/api/auth/register".equals(path)
+                        || "/api/auth/login".equals(path)
+                        || "/api/auth/refresh".equals(path)
+        )
+                || "GET".equalsIgnoreCase(request.getMethod())
+                && "/.well-known/jwks.json".equals(path);
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
@@ -57,7 +72,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (!(userIdClaim instanceof Number userIdNumber)
                     || roleClaim == null) {
-                throw new JwtException("Required JWT claims are missing or invalid");
+                throw new JwtException(
+                        "Required JWT claims are missing or invalid"
+                );
             }
 
             long userId = userIdNumber.longValue();
