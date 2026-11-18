@@ -28,7 +28,9 @@ app:
   bootstrap-admin:
     username: ${ADMIN_USERNAME:}
     password: ${ADMIN_PASSWORD:}
-    user-id: ${ADMIN_USER_ID:}
+    name: ${ADMIN_NAME:}
+    surname: ${ADMIN_SURNAME:}
+    email: ${ADMIN_EMAIL:}
 
 logging:
   level:

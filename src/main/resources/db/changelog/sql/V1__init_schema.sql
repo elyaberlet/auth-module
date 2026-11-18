@@ -9,7 +9,7 @@ CREATE TABLE credentials (
     role VARCHAR(20) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_credentials_role CHECK (role IN ('ADMIN', 'USER'))
+    CONSTRAINT chk_credentials_role CHECK (role IN ('ADMIN', 'USER', 'SERVICE'))
 );
 
 --rollback DROP TABLE credentials;

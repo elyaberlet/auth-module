@@ -1,6 +1,9 @@
 
 package com.innowise.authservice.config;
 
+import com.innowise.authservice.client.UserServiceClient;
+import com.innowise.authservice.dto.response.UserServiceUserDetailsResponse;
+import com.innowise.authservice.dto.response.UserServiceUserResponse;
 import com.innowise.authservice.entity.Credential;
 import com.innowise.authservice.entity.Role;
 import com.innowise.authservice.repository.CredentialRepository;
@@ -8,16 +11,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +31,9 @@ class BootstrapAdminInitializerTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private UserServiceClient userServiceClient;
+
     private ApplicationArguments args;
 
     @BeforeEach
@@ -39,264 +44,124 @@ class BootstrapAdminInitializerTest {
     private BootstrapAdminInitializer createInitializer(
             String username,
             String password,
-            String userId
+            String name,
+            String surname,
+            String email
     ) {
         return new BootstrapAdminInitializer(
                 credentialRepository,
                 passwordEncoder,
+                userServiceClient,
                 username,
                 password,
-                userId
+                name,
+                surname,
+                email
+        );
+    }
+
+    private UserServiceUserDetailsResponse existingUser(Long id) {
+        return new UserServiceUserDetailsResponse(
+                id,
+                "Admin",
+                "Marketplace",
+                null,
+                "admin@marketplace.local",
+                true,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
     }
 
     @Test
     void shouldDoNothingWhenAllAdminPropertiesAreBlank() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("", "", "");
+        var initializer = createInitializer("", "", "", "", "");
 
         assertDoesNotThrow(() -> initializer.run(args));
 
-        verifyNoInteractions(credentialRepository, passwordEncoder);
+        verifyNoInteractions(
+                credentialRepository,
+                passwordEncoder,
+                userServiceClient
+        );
     }
 
     @Test
     void shouldThrowWhenOnlySomeAdminPropertiesAreConfigured() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "", "1");
+        var initializer = createInitializer(
+                "admin", "", "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
 
         assertThrows(
                 IllegalStateException.class,
                 () -> initializer.run(args)
         );
 
-        verifyNoInteractions(credentialRepository, passwordEncoder);
+        verifyNoInteractions(
+                credentialRepository,
+                passwordEncoder,
+                userServiceClient
+        );
     }
 
     @Test
     void shouldThrowWhenPasswordIsTooShort() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "short", "1");
+        var initializer = createInitializer(
+                "admin", "short", "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
 
         assertThrows(
                 IllegalStateException.class,
                 () -> initializer.run(args)
         );
 
-        verifyNoInteractions(credentialRepository, passwordEncoder);
+        verifyNoInteractions(
+                credentialRepository,
+                passwordEncoder,
+                userServiceClient
+        );
     }
 
     @Test
     void shouldThrowWhenPasswordIsTooLong() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "a".repeat(73), "1");
+        var initializer = createInitializer(
+                "admin", "a".repeat(73), "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
 
         assertThrows(
                 IllegalStateException.class,
                 () -> initializer.run(args)
         );
 
-        verifyNoInteractions(credentialRepository, passwordEncoder);
+        verifyNoInteractions(
+                credentialRepository,
+                passwordEncoder,
+                userServiceClient
+        );
     }
 
     @Test
-    void shouldAcceptPasswordWithMinimumLength() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "12345678", "1");
+    void shouldCreateAdminWhenProfileDoesNotExist() {
+        var initializer = createInitializer(
+                "admin", "password123", "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
 
         when(credentialRepository.findByUsername("admin"))
                 .thenReturn(Optional.empty());
-        when(credentialRepository.findByUserId(1L))
+
+        when(userServiceClient.findUserByEmail("admin@marketplace.local"))
+                .thenReturn(null);
+
+        when(userServiceClient.createUser(any()))
+                .thenReturn(new UserServiceUserResponse(42L));
+
+        when(credentialRepository.findByUserId(42L))
                 .thenReturn(Optional.empty());
-        when(passwordEncoder.encode("12345678"))
-                .thenReturn("encoded-password");
 
-        assertDoesNotThrow(() -> initializer.run(args));
-
-        verify(credentialRepository).save(any(Credential.class));
-    }
-
-    @Test
-    void shouldAcceptPasswordWithMaximumLength() {
-        String password = "a".repeat(72);
-
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", password, "1");
-
-        when(credentialRepository.findByUsername("admin"))
-                .thenReturn(Optional.empty());
-        when(credentialRepository.findByUserId(1L))
-                .thenReturn(Optional.empty());
-        when(passwordEncoder.encode(password))
-                .thenReturn("encoded-password");
-
-        assertDoesNotThrow(() -> initializer.run(args));
-
-        verify(credentialRepository).save(any(Credential.class));
-    }
-
-    @Test
-    void shouldThrowWhenUserIdIsNotANumber() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "abc");
-
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> initializer.run(args)
-        );
-
-        assertEquals(
-                "ADMIN_USER_ID must be a valid number",
-                exception.getMessage()
-        );
-
-        verifyNoInteractions(credentialRepository, passwordEncoder);
-    }
-
-    @Test
-    void shouldThrowWhenUserIdIsZero() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "0");
-
-        assertThrows(
-                IllegalStateException.class,
-                () -> initializer.run(args)
-        );
-
-        verifyNoInteractions(credentialRepository, passwordEncoder);
-    }
-
-    @Test
-    void shouldThrowWhenUserIdIsNegative() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "-1");
-
-        assertThrows(
-                IllegalStateException.class,
-                () -> initializer.run(args)
-        );
-
-        verifyNoInteractions(credentialRepository, passwordEncoder);
-    }
-
-    @Test
-    void shouldThrowWhenUsernameBelongsToAnotherAccount() {
-        Credential existing = new Credential();
-        existing.setUserId(2L);
-        existing.setRole(Role.ADMIN);
-
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "1");
-
-        when(credentialRepository.findByUsername("admin"))
-                .thenReturn(Optional.of(existing));
-
-        assertThrows(
-                IllegalStateException.class,
-                () -> initializer.run(args)
-        );
-
-        verify(credentialRepository, never()).findByUserId(anyLong());
-        verify(credentialRepository, never()).save(any());
-    }
-
-    @Test
-    void shouldThrowWhenUsernameBelongsToNonAdminAccount() {
-        Credential existing = new Credential();
-        existing.setUserId(1L);
-        existing.setRole(Role.USER);
-
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "1");
-
-        when(credentialRepository.findByUsername("admin"))
-                .thenReturn(Optional.of(existing));
-
-        assertThrows(
-                IllegalStateException.class,
-                () -> initializer.run(args)
-        );
-
-        verify(credentialRepository, never()).findByUserId(anyLong());
-        verify(credentialRepository, never()).save(any());
-    }
-
-    @Test
-    void shouldThrowWhenUserIdBelongsToAnotherUsername() {
-        Credential existing = new Credential();
-        existing.setUserId(1L);
-        existing.setUsername("another-user");
-        existing.setRole(Role.ADMIN);
-
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "1");
-
-        when(credentialRepository.findByUsername("admin"))
-                .thenReturn(Optional.empty());
-        when(credentialRepository.findByUserId(1L))
-                .thenReturn(Optional.of(existing));
-
-        assertThrows(
-                IllegalStateException.class,
-                () -> initializer.run(args)
-        );
-
-        verify(credentialRepository, never()).save(any());
-    }
-
-    @Test
-    void shouldThrowWhenUserIdBelongsToNonAdminAccount() {
-        Credential existing = new Credential();
-        existing.setUserId(1L);
-        existing.setUsername("admin");
-        existing.setRole(Role.USER);
-
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "1");
-
-        when(credentialRepository.findByUsername("admin"))
-                .thenReturn(Optional.empty());
-        when(credentialRepository.findByUserId(1L))
-                .thenReturn(Optional.of(existing));
-
-        assertThrows(
-                IllegalStateException.class,
-                () -> initializer.run(args)
-        );
-
-        verify(credentialRepository, never()).save(any());
-    }
-
-    @Test
-    void shouldDoNothingWhenCorrectAdminAlreadyExists() {
-        Credential existing = new Credential();
-        existing.setUserId(1L);
-        existing.setUsername("admin");
-        existing.setRole(Role.ADMIN);
-
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "1");
-
-        when(credentialRepository.findByUsername("admin"))
-                .thenReturn(Optional.of(existing));
-        when(credentialRepository.findByUserId(1L))
-                .thenReturn(Optional.of(existing));
-
-        assertDoesNotThrow(() -> initializer.run(args));
-
-        verify(credentialRepository, never()).save(any());
-        verifyNoInteractions(passwordEncoder);
-    }
-
-    @Test
-    void shouldCreateAdminWhenItDoesNotExist() {
-        BootstrapAdminInitializer initializer =
-                createInitializer("admin", "password123", "1");
-
-        when(credentialRepository.findByUsername("admin"))
-                .thenReturn(Optional.empty());
-        when(credentialRepository.findByUserId(1L))
-                .thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123"))
                 .thenReturn("encoded-password");
 
@@ -305,15 +170,150 @@ class BootstrapAdminInitializerTest {
         ArgumentCaptor<Credential> captor =
                 ArgumentCaptor.forClass(Credential.class);
 
-        verify(credentialRepository).save(captor.capture());
+        verify(credentialRepository).saveAndFlush(captor.capture());
 
         Credential saved = captor.getValue();
 
-        assertEquals(1L, saved.getUserId());
+        assertEquals(42L, saved.getUserId());
         assertEquals("admin", saved.getUsername());
         assertEquals("encoded-password", saved.getPasswordHash());
         assertEquals(Role.ADMIN, saved.getRole());
 
+        verify(userServiceClient).createUser(any());
         verify(passwordEncoder).encode("password123");
+    }
+
+    @Test
+    void shouldReuseExistingUserProfile() {
+        var initializer = createInitializer(
+                "admin", "password123", "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
+
+        when(credentialRepository.findByUsername("admin"))
+                .thenReturn(Optional.empty());
+
+        when(userServiceClient.findUserByEmail("admin@marketplace.local"))
+                .thenReturn(existingUser(42L));
+
+        when(credentialRepository.findByUserId(42L))
+                .thenReturn(Optional.empty());
+
+        when(passwordEncoder.encode("password123"))
+                .thenReturn("encoded-password");
+
+        initializer.run(args);
+
+        ArgumentCaptor<Credential> captor =
+                ArgumentCaptor.forClass(Credential.class);
+
+        verify(credentialRepository).saveAndFlush(captor.capture());
+
+        assertEquals(42L, captor.getValue().getUserId());
+
+        verify(userServiceClient, never()).createUser(any());
+    }
+
+    @Test
+    void shouldThrowWhenProfileIdAlreadyBelongsToAnotherCredential() {
+        var initializer = createInitializer(
+                "admin", "password123", "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
+
+        Credential anotherCredential = new Credential();
+        anotherCredential.setUserId(42L);
+        anotherCredential.setUsername("another-user");
+        anotherCredential.setRole(Role.USER);
+
+        when(credentialRepository.findByUsername("admin"))
+                .thenReturn(Optional.empty());
+
+        when(userServiceClient.findUserByEmail("admin@marketplace.local"))
+                .thenReturn(existingUser(42L));
+
+        when(credentialRepository.findByUserId(42L))
+                .thenReturn(Optional.of(anotherCredential));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> initializer.run(args)
+        );
+
+        verify(credentialRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void shouldThrowWhenExistingUsernameBelongsToNonAdmin() {
+        Credential existing = new Credential();
+        existing.setUserId(42L);
+        existing.setUsername("admin");
+        existing.setRole(Role.USER);
+
+        var initializer = createInitializer(
+                "admin", "password123", "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
+
+        when(credentialRepository.findByUsername("admin"))
+                .thenReturn(Optional.of(existing));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> initializer.run(args)
+        );
+
+        verifyNoInteractions(userServiceClient);
+        verify(credentialRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void shouldDoNothingWhenCorrectAdminAlreadyExists() {
+        Credential existing = new Credential();
+        existing.setUserId(42L);
+        existing.setUsername("admin");
+        existing.setRole(Role.ADMIN);
+
+        var initializer = createInitializer(
+                "admin", "password123", "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
+
+        when(credentialRepository.findByUsername("admin"))
+                .thenReturn(Optional.of(existing));
+
+        when(userServiceClient.findUserByEmail("admin@marketplace.local"))
+                .thenReturn(existingUser(42L));
+
+        assertDoesNotThrow(() -> initializer.run(args));
+
+        verify(credentialRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void shouldThrowWhenExistingAdminProfileDoesNotMatchCredentials() {
+        Credential existing = new Credential();
+        existing.setUserId(42L);
+        existing.setUsername("admin");
+        existing.setRole(Role.ADMIN);
+
+        var initializer = createInitializer(
+                "admin", "password123", "Admin", "Marketplace",
+                "admin@marketplace.local"
+        );
+
+        when(credentialRepository.findByUsername("admin"))
+                .thenReturn(Optional.of(existing));
+
+        when(userServiceClient.findUserByEmail("admin@marketplace.local"))
+                .thenReturn(existingUser(99L));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> initializer.run(args)
+        );
+
+        verify(credentialRepository, never()).saveAndFlush(any());
     }
 }

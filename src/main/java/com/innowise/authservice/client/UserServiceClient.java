@@ -1,6 +1,8 @@
+
 package com.innowise.authservice.client;
 
 import com.innowise.authservice.dto.request.UserServiceCreateUserRequest;
+import com.innowise.authservice.dto.response.UserServiceUserDetailsResponse;
 import com.innowise.authservice.dto.response.UserServiceUserResponse;
 import com.innowise.authservice.service.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Component
 @RequiredArgsConstructor
@@ -20,7 +23,9 @@ public class UserServiceClient {
     @Value("${user-service.base-url}")
     private String userServiceBaseUrl;
 
-    public UserServiceUserResponse createUser(UserServiceCreateUserRequest request) {
+    public UserServiceUserResponse createUser(
+            UserServiceCreateUserRequest request
+    ) {
         String serviceToken = jwtService.generateServiceAccessToken();
 
         return webClientBuilder
@@ -48,5 +53,24 @@ public class UserServiceClient {
                 .retrieve()
                 .toBodilessEntity()
                 .block();
+    }
+
+
+    public UserServiceUserDetailsResponse findUserByEmail(String email) {
+        String serviceToken = jwtService.generateServiceAccessToken();
+
+        try {
+            return webClientBuilder
+                    .baseUrl(userServiceBaseUrl)
+                    .build()
+                    .get()
+                    .uri("/api/users/email/{email}", email)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + serviceToken)
+                    .retrieve()
+                    .bodyToMono(UserServiceUserDetailsResponse.class)
+                    .block();
+        } catch (WebClientResponseException.NotFound exception) {
+            return null;
+        }
     }
 }
